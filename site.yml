@@ -1,0 +1,87 @@
+---
+- name: install builder
+  hosts: builder
+  become: yes
+
+  tasks:
+
+  - name: Ensure git package is present
+    apt:
+      name: git
+      state: present
+  - name: Ensure maven package is present
+    apt:
+      name: maven
+      state: present
+#  - name: Install latest version of "openjdk-8-jdk"
+#    apt:
+#      name: openjdk-8-jdk
+#      state: latest
+#  - name: Download Maven 
+#    get_url: 
+#      url: https://dlcdn.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+#      dest: /tmp/apache-maven-3.6.3-bin.tar.gz
+#  - name: Untar Maven 
+#    shell: chdir=/tmp creates=/opt/apache-maven-3.6.3 tar -zxf apache-maven-3.6.3-bin.tar.gz -C /opt
+#  - name: Update path for maven use
+#    shell: export PATH=/opt/apache-maven-3.6.3/bin:$PATH
+  - name: Create a directory if it does not exist
+    ansible.builtin.file:
+      path: /tmp/homework8
+      state: directory
+      mode: '0755'
+  - name: Clone a repo with separate git directory
+    ansible.builtin.git:
+      repo: https://github.com/boxfuse/boxfuse-sample-java-war-hello.git
+      dest: /tmp/homework8/boxfuse-sample-java-war-hello
+      clone: yes
+      update: yes
+  - name: Maven install package
+    shell: mvn package -f /tmp/homework8/boxfuse-sample-java-war-hello
+  - name: Store WAR file in local machine
+    ansible.builtin.fetch:
+      src: /tmp/homework8/boxfuse-sample-java-war-hello/target/hello-1.0.war
+      dest: /home/dimamuro91/homework8/
+
+
+#- name: Download a WAR File to the Tomcat webapps directory to be deployed
+#  community.general.maven_artifact:
+#    group_id: com.company
+#    artifact_id: web-app
+#    extension: war
+#    repository_url: 'https://repo.company.com/maven'
+#    dest: /var/lib/tomcat7/webapps/web-app.war
+
+#  - name: Update path for maven use
+#    shell: export PATH=/opt/apache-maven-3.8.3/bin:$PATH
+
+- name: install tomcat
+  hosts: web
+  become: yes
+
+  tasks:
+  - name: Install OpenJDK
+    apt:
+      name: openjdk-11-jre-headless
+
+  - name: download tomcat server packages
+    get_url:
+      url: https://mirrors.estointernet.in/apache/tomcat/tomcat-9/v9.0.54/bin/apache-tomcat-9.0.54.tar.gz
+      dest: /usr/local
+
+  - name: extract tomcat packages
+    unarchive:
+      src: /usr/local/apache-tomcat-9.0.54.tar.gz
+      dest: /usr/local
+      remote_src: yes
+  - name: Copy war to the Tomcat webapps
+    copy:
+      src: 10.186.0.3/tmp/homework8/boxfuse-sample-java-war-hello/target/hello-1.0.war
+      dest: /usr/local/apache-tomcat-9.0.54/webapps
+  - name: start tomcat services
+    shell: nohup /usr/local/apache-tomcat-9.0.54/bin/startup.sh
+
+#  - name: Ensure nginx service is started
+#    service:
+#      name: tomcat
+#      state: started
